@@ -1,0 +1,5 @@
+Tipado (.tsx): Si estás usando TypeScript, el estándar es usar la extensión .tsx para los componentes y .ts para archivos de lógica (hooks, utils, services, etc.).
+
+Convención de Nombres: Mantén una convención consistente. Por ejemplo, los nombres de componentes y pantallas deben empezar con mayúscula (HomeScreen.js, Button.js), mientras que las carpetas y utilidades suelen ir en minúscula.
+
+Componentes Locales: Si un componente solo se usa en una pantalla y no tiene potencial de reutilización, a veces es aceptable crearlo dentro de una subcarpeta en screens/ (por ejemplo, screens/HomeScreen/components/WelcomeBanner.js) para mantener el directorio principal de components/ limpio.
