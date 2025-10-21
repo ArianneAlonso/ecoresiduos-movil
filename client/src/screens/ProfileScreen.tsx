@@ -34,7 +34,7 @@ const ProfileScreen = ({ navigation }) => {
         <View style={styles.headerBackground}>
           <IconButton
             icon="cog"
-            color="#fff" 
+            iconColor="#fff" 
             size={24}
             onPress={() => navigation.navigate('Settings')} 
             style={styles.settingsIcon}
