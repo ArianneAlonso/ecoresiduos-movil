@@ -4,7 +4,6 @@ import { Chip, IconButton } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 const Header = () => {
-  
   return (
     <View style={styles.headerContainer}>
       <Chip
@@ -14,6 +13,7 @@ const Header = () => {
       >
         1500 Ecopuntos
       </Chip>
+
       <IconButton
         icon={() => <MaterialCommunityIcons name="bell-outline" size={28} />}
         onPress={() => console.log('Notificaciones')}

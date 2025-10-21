@@ -1,26 +1,28 @@
-// ... importaciones
-import WelcomeScreen from '../screens/WelcomeScreen';
-import LoginScreen from '../screens/LoginRegisterScreen'; // Importa la nueva pantalla
-import { createStackNavigator } from '@react-navigation/stack';
+import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
+import WelcomeScreen from '../screens/WelcomeScreen';
+import LoginRegisterScreen from '../screens/LoginRegisterScreen';
+
 
 const Stack = createStackNavigator();
 
 export default function AppNavigator() {
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName="Welcome"> {/* O "Login" si quieres que esta sea la primera */}
-        <Stack.Screen 
-          name="Welcome" 
+      {/* 👇 id={undefined} elimina el error de tipos en TS */}
+      <Stack.Navigator id={undefined} initialRouteName="Welcome">
+        <Stack.Screen
+          name="Welcome"
           component={WelcomeScreen}
-          options={{ headerShown: false }} 
+          options={{ headerShown: false }}
         />
-        <Stack.Screen 
-          name="Login" 
-          component={LoginScreen}
-          options={{ headerShown: false }} // También ocultamos el encabezado aquí
+        <Stack.Screen
+          name="Login"
+          component={LoginRegisterScreen}
+          options={{ headerShown: false }}
         />
-        {/* ... otras pantallas */}
+        {/* Podés agregar más pantallas aquí */}
       </Stack.Navigator>
     </NavigationContainer>
   );
