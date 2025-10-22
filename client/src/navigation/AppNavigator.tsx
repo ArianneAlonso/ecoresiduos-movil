@@ -10,7 +10,6 @@ const Stack = createStackNavigator();
 export default function AppNavigator() {
   return (
     <NavigationContainer>
-      {/* 👇 id={undefined} elimina el error de tipos en TS */}
       <Stack.Navigator id={undefined} initialRouteName="Welcome">
         <Stack.Screen
           name="Welcome"

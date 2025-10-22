@@ -1,299 +1,277 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TextInput, Button } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
-import api from '../../servicies/api'; 
+import * as Location from 'expo-location';
+import api from '../../servicies/api';
 
 export default function LoginRegisterScreen() {
-  const [activeTab, setActiveTab] = useState('inicio'); 
+  const [activeTab, setActiveTab] = useState<'inicio' | 'registro'>('inicio');
 
-  // Estados para Login
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  // Estados para Login
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
 
-  // Estados para Registro
-  const [createUsername, setCreateUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [createPassword, setCreatePassword] = useState('');
-  const [role, setRole] = useState(''); // <-- Tuve en cuenta este campo
+  // Estados para Registro
+  const [createUsername, setCreateUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [createPassword, setCreatePassword] = useState('');
+  const [zone, setZone] = useState('');
+  const [loadingLocation, setLoadingLocation] = useState(false);
 
-  // <-- 3. Estado de Carga
-  const [loading, setLoading] = useState(false);
-  
-  // <-- 4. Obtené la navegación
-  const navigation = useNavigation<any>(); // Usamos <any> para simplicidad
+  // Estado de Carga
+  const [loading, setLoading] = useState(false);
 
-  // <-- 5. Función de Login MODIFICADA
-  const handleLogin = async () => {
-    if (loading) return; // Evitar doble click
-    setLoading(true);
+  // Navegación
+  const navigation = useNavigation<any>();
 
-    try {
-      // Llama a la función 'login' de tu api.ts
-      const response = await api.login({ username, password });
+  // Obtener ubicación automáticamente al cambiar a la pestaña de registro
+  useEffect(() => {
+    if (activeTab === 'registro') {
+      getLocationAndZone();
+    }
+  }, [activeTab]);
 
-      // Si salió bien (asumiendo que el server responde con datos)
-      console.log('Login exitoso:', response.data);
-      
-      // Aquí podés guardar el token de usuario si tu API te da uno
-      // ej: await AsyncStorage.setItem('userToken', response.data.token);
+  const getLocationAndZone = async () => {
+    setLoadingLocation(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permiso denegado', 'No se pudo obtener la ubicación');
+        setZone('Desconocida');
+        return;
+      }
 
-      // Navegá a la pantalla principal (definida en tu App.tsx)
-      navigation.navigate('Main');
+      const location = await Location.getCurrentPositionAsync({});
+      const { latitude, longitude } = location.coords;
 
-    } catch (error) {
-      // Si el server da error (ej: 401 No autorizado)
-      console.error('Error en login:', error);
-      Alert.alert('Error', 'Usuario o contraseña incorrectos.');
-    } finally {
-      // Se ejecuta siempre, ya sea éxito o error
-      setLoading(false);
-    }
-  };
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
+      );
+      const data = await response.json();
+      const city =
+        data.address?.city ||
+        data.address?.town ||
+        data.address?.village ||
+        data.address?.suburb ||
+        'Desconocida';
 
-  // <-- 6. Función de Registro MODIFICADA
-  const handleRegister = async () => {
-    if (loading) return;
-    setLoading(true);
+      setZone(city);
+    } catch (err) {
+      console.error('Error al obtener la ubicación:', err);
+      setZone('Desconocida');
+    } finally {
+      setLoadingLocation(false);
+    }
+  };
 
-    try {
-      // (Asumiremos que tu api.ts tendrá una función 'register')
-      await api.register({
-        username: createUsername,
-        email: email,
-        password: createPassword,
-        role: role || 'user', // Asignar 'user' por defecto si está vacío
-      });
+  // Función Login
+  const handleLogin = async () => {
+    if (loading) return;
+    setLoading(true);
 
-      // Si el registro salió bien
-      Alert.alert('¡Éxito!', 'Te has registrado correctamente. Ahora puedes iniciar sesión.');
-      
-      // Limpiar campos y cambiar de pestaña
+    try {
+      const response = await api.login({ email: username, password });
+      console.log('Login exitoso:', response);
+      navigation.navigate('Main');
+    } catch (error) {
+      console.error('Error en login:', error);
+      Alert.alert('Error', 'Usuario o contraseña incorrectos.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Función Registro
+  const handleRegister = async () => {
+    if (loading) return;
+    setLoading(true);
+
+    if (!createUsername || !email || !createPassword || !zone) {
+      Alert.alert('Error', 'Todos los campos y la zona son obligatorios');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      await api.register({
+        username: createUsername,
+        email,
+        password: createPassword,
+        zone,
+      } as any);
+
+      Alert.alert('¡Éxito!', 'Te has registrado correctamente. Ahora puedes iniciar sesión.');
       setCreateUsername('');
       setEmail('');
       setCreatePassword('');
-      setRole('');
-      setActiveTab('inicio');
+      setZone('');
+      setActiveTab('inicio');
+    } catch (error) {
+      console.error('Error en registro:', error);
+      Alert.alert('Error', 'No se pudo completar el registro. Intenta de nuevo.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    } catch (error) {
-      console.error('Error en registro:', error);
-      Alert.alert('Error', 'No se pudo completar el registro. Intenta de nuevo.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const handleForgotPassword = () => {
+    console.log('Olvidé la contraseña');
+  };
 
-  const handleForgotPassword = () => {
-    console.log('Olvidé la contraseña');
-  };
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <View style={{ flexDirection: 'row', marginBottom: 20 }}>
+          <TouchableOpacity
+            onPress={() => setActiveTab('inicio')}
+            style={{ marginRight: 10, padding: 8, backgroundColor: activeTab === 'inicio' ? '#9ccc65' : '#eee', borderRadius: 6 }}
+          >
+            <Text style={{ color: activeTab === 'inicio' ? '#fff' : '#333' }}>Iniciar sesión</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setActiveTab('registro')}
+            style={{ padding: 8, backgroundColor: activeTab === 'registro' ? '#9ccc65' : '#eee', borderRadius: 6 }}
+          >
+            <Text style={{ color: activeTab === 'registro' ? '#fff' : '#333' }}>Registro</Text>
+          </TouchableOpacity>
+        </View>
 
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
+        {activeTab === 'inicio' ? (
+          <View style={styles.formSection}>
+            <Text style={styles.inputLabel}>Correo Electrónico</Text>
+            <TextInput
+              mode="outlined"
+              label="Correo Electrónico"
+              value={username}
+              onChangeText={setUsername}
+              disabled={loading}
+              left={<TextInput.Icon icon="email-outline" />}
+              style={styles.textInput}
+              outlineStyle={styles.textInputOutline}
+              theme={{ colors: { primary: '#9ccc65', onSurfaceVariant: '#666' } }}
+            />
 
-        <View style={styles.tabContainer}>
-          {/* ... (El resto de tu código de pestañas no cambia) ... */}
-          <TouchableOpacity
-            style={[styles.tabButton, activeTab === 'inicio' && styles.tabButtonActive]}
-            onPress={() => setActiveTab('inicio')}
-          >
-            <Text style={[styles.tabButtonText, activeTab === 'inicio' && styles.tabButtonTextActive]}>
-              Inicio
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tabButton, activeTab === 'registro' && styles.tabButtonActive]}
-            onPress={() => setActiveTab('registro')}
-          >
-            <Text style={[styles.tabButtonText, activeTab === 'registro' && styles.tabButtonTextActive]}>
-              Registro
-            </Text>
-          </TouchableOpacity>
-        </View>
+            <Text style={styles.inputLabel}>Contraseña</Text>
+            <TextInput
+              mode="outlined"
+              label="Contraseña"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              disabled={loading}
+              left={<TextInput.Icon icon="lock-outline" />}
+              style={styles.textInput}
+              outlineStyle={styles.textInputOutline}
+              theme={{ colors: { primary: '#9ccc65', onSurfaceVariant: '#666' } }}
+            />
 
-        {activeTab === 'inicio' ? (
-          <View style={styles.formSection}>
-            {/* ... (Inputs de Usuario y Contraseña no cambian) ... */}
-            <Text style={styles.inputLabel}>Usuario</Text>
-            <TextInput
-              mode="outlined"
-              label="Usuario"
-              value={username}
-              onChangeText={setUsername}
-              disabled={loading} // <-- Desactivar si está cargando
-              left={<TextInput.Icon icon="account-outline" />}
-              style={styles.textInput}
-              outlineStyle={styles.textInputOutline}
-              theme={{ colors: { primary: '#9ccc65', onSurfaceVariant: '#666' } }}
-            />
-            <Text style={styles.inputLabel}>Contraseña</Text>
-            <TextInput
-              mode="outlined"
-              label="Contraseña"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              disabled={loading} // <-- Desactivar si está cargando
-              left={<TextInput.Icon icon="lock-outline" />}
-              style={styles.textInput}
-              outlineStyle={styles.textInputOutline}
-              theme={{ colors: { primary: '#9ccc65', onSurfaceVariant: '#666' } }}
-            />
-            <TouchableOpacity onPress={handleForgotPassword} style={styles.forgotPasswordContainer}>
-              <Text style={styles.forgotPasswordText}>Olvidé la contraseña</Text>
-            </TouchableOpacity>
-            <Button
-              mode="contained"
-              onPress={handleLogin}
-              style={styles.loginButton}
-              labelStyle={styles.loginButtonLabel}
-              loading={loading} // <-- 7. Mostrar spinner si está cargando
-              disabled={loading} // <-- Desactivar el botón
-            >
-              {loading ? 'Ingresando...' : 'Ingresar'}
-            </Button>
-          </View>
-        ) : 
-        ( <View style={styles.formSection}>
-            {/* ... (Inputs de Registro no cambian, solo agregá 'disabled') ... */}
+            <TouchableOpacity onPress={handleForgotPassword} style={{ marginBottom: 10 }}>
+              <Text style={{ color: '#9ccc65' }}>Olvidé mi contraseña</Text>
+            </TouchableOpacity>
+
+            <Button
+              mode="contained"
+              onPress={handleLogin}
+              style={styles.loginButton}
+              labelStyle={styles.loginButtonLabel}
+              loading={loading}
+              disabled={loading}
+            >
+              {loading ? 'Iniciando...' : 'Iniciar sesión'}
+            </Button>
+          </View>
+        ) : (
+          <View style={styles.formSection}>
             <Text style={styles.inputLabel}>Crear usuario</Text>
-            <TextInput
-              mode="outlined"
-              label="Crear usuario"
-              value={createUsername}
-              onChangeText={setCreateUsername}
+            <TextInput
+              mode="outlined"
+              label="Crear usuario"
+              value={createUsername}
+              onChangeText={setCreateUsername}
               disabled={loading}
-              left={<TextInput.Icon icon="account-outline" />}
-              style={styles.textInput}
-              outlineStyle={styles.textInputOutline}
-              theme={{ colors: { primary: '#9ccc65', onSurfaceVariant: '#666' } }}
-            />
-            <Text style={styles.inputLabel}>Correo Electrónico</Text>
-            <TextInput
-              mode="outlined"
-              label="Correo Electrónico"
-              value={email}
-              onChangeText={setEmail}
+              left={<TextInput.Icon icon="account-outline" />}
+              style={styles.textInput}
+              outlineStyle={styles.textInputOutline}
+              theme={{ colors: { primary: '#9ccc65', onSurfaceVariant: '#666' } }}
+            />
+
+            <Text style={styles.inputLabel}>Correo Electrónico</Text>
+            <TextInput
+              mode="outlined"
+              label="Correo Electrónico"
+              value={email}
+              onChangeText={setEmail}
               disabled={loading}
-              left={<TextInput.Icon icon="email-outline" />}
-              style={styles.textInput}
-              outlineStyle={styles.textInputOutline}
-              theme={{ colors: { primary: '#9ccc65', onSurfaceVariant: '#666' } }}
-            />
-            <Text style={styles.inputLabel}>Crear contraseña</Text>
-            <TextInput
-              mode="outlined"
-              label="Crear contraseña"
-              value={createPassword}
-              onChangeText={setCreatePassword}
-              secureTextEntry
+              left={<TextInput.Icon icon="email-outline" />}
+              style={styles.textInput}
+              outlineStyle={styles.textInputOutline}
+              theme={{ colors: { primary: '#9ccc65', onSurfaceVariant: '#666' } }}
+            />
+
+            <Text style={styles.inputLabel}>Crear contraseña</Text>
+            <TextInput
+              mode="outlined"
+              label="Crear contraseña"
+              value={createPassword}
+              onChangeText={setCreatePassword}
+              secureTextEntry
               disabled={loading}
-              left={<TextInput.Icon icon="lock-outline" />}
-              style={styles.textInput}
-              outlineStyle={styles.textInputOutline}
-              theme={{ colors: { primary: '#9ccc65', onSurfaceVariant: '#666' } }}
-            />
-            {/* ... (Podrías agregar un input para 'role' si quisieras) ... */}
-            <Button
-              mode="contained"
-              onPress={handleRegister}
-              style={styles.loginButton}
-              labelStyle={styles.loginButtonLabel}
-              loading={loading} // <-- 7. Mostrar spinner
-              disabled={loading} // <-- Desactivar
-            >
-              {loading ? 'Registrando...' : 'Registrar'}
-            </Button>
-          </View>
-        )}
-      </View>
-    </SafeAreaView>
-  );
+              left={<TextInput.Icon icon="lock-outline" />}
+              style={styles.textInput}
+              outlineStyle={styles.textInputOutline}
+              theme={{ colors: { primary: '#9ccc65', onSurfaceVariant: '#666' } }}
+            />
+
+            <Text style={{ marginTop: 10, color: '#666', fontSize: 14 }}>
+              Zona detectada: {loadingLocation ? 'Cargando...' : zone || 'No detectada'}
+            </Text>
+
+            <Button
+              mode="contained"
+              onPress={handleRegister}
+              style={styles.loginButton}
+              labelStyle={styles.loginButtonLabel}
+              loading={loading}
+              disabled={loading}
+            >
+              {loading ? 'Registrando...' : 'Registrar'}
+            </Button>
+          </View>
+        )}
+      </View>
+    </SafeAreaView>
+  );
 }
 
-// ... (Tus estilos de 'styles' van aquí abajo, no cambian nada)
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: 'white',
-  },
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#f0f0f0',
-    borderRadius: 30,
-    overflow: 'hidden',
-    marginBottom: 50,
-    width: '80%',
-    marginTop: 20,
-  },
-  tabButton: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  tabButtonActive: {
-    backgroundColor: '#9ccc65',
-    borderRadius: 30,
-  },
-  tabButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#666',
-  },
-  tabButtonTextActive: {
-    color: 'white',
-  },
-  formSection: {
-    width: '100%',
-    alignItems: 'center',
-  },
-  inputLabel: {
-    alignSelf: 'flex-start',
-    marginLeft: '10%',
-    fontSize: 16,
-    color: '#333',
-    fontWeight: '500',
-    marginBottom: 5,
-    marginTop: 20,
-  },
-  textInput: {
-    width: '80%',
-    marginBottom: 10,
-    backgroundColor: '#f0f0f0',
-    height: 50,
-  },
-  textInputOutline: {
-    borderRadius: 10,
-    borderColor: 'transparent',
-  },
-  forgotPasswordContainer: {
-    alignSelf: 'flex-start',
-    marginLeft: '10%',
-    marginTop: 5,
-    marginBottom: 40,
-  },
-  forgotPasswordText: {
-    color: '#9ccc65',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  loginButton: {
-    width: '80%',
-    padding: 10,
-    borderRadius: 30,
-    backgroundColor: '#9ccc65',
-    marginTop: 20,
-  },
-  loginButtonLabel: {
-    fontSize: 18,
-    color: 'white',
-    fontWeight: 'bold',
-  },
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#fff'
+  },
+  container: {
+    flex: 1,
+    padding: 20
+  },
+  formSection: {
+    flex: 1
+  },
+  textInput: {
+    marginBottom: 10
+  },
+  textInputOutline: {
+    borderRadius: 8
+  },
+  loginButton: {
+    marginTop: 20,
+    backgroundColor: '#9ccc65'
+  },
+  loginButtonLabel: {
+    fontSize: 16
+  },
+  inputLabel: {
+    marginBottom: 5,
+    color: '#666'
+  }
 });

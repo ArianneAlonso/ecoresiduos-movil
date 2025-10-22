@@ -13,7 +13,8 @@ import qrCodeRoutes from './routes/qrroutes';
 dotenv.config();
 connectDB();
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = parseInt(process.env.PORT || '3000', 10);
+const HOST = '0.0.0.0'; // ✅ AGREGAR ESTA LÍNEA
 
 // Middlewares
 app.use(cors());
@@ -26,6 +27,7 @@ app.use('/api/routes', truckRouteRoutes);
 app.use('/api/qrcodes', qrCodeRoutes);
 
 // Iniciar el servidor
-app.listen(PORT, () => {
-  console.log(`Servidor corriendo en http://localhost:${PORT} `);
+app.listen(PORT, HOST, () => { // ✅ AGREGAR HOST AQUÍ
+  console.log(`Servidor corriendo en http://${HOST}:${PORT}`);
+  console.log(`Accesible desde la red local en: http://10.254.196.102:${PORT}`);
 });

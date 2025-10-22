@@ -21,22 +21,24 @@ export const registerUser = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'El correo electrónico ya está en uso' });
     }
 
-    const user = await User.create({ username, email, password, zone });
+    // Usar new User + save para activar middleware pre('save') (ej. hasheo de password)
+    const user = new User({ username, email, password, zone });
+    await user.save();
 
-    if (user) {
-      res.status(201).json({
-        _id: user._id,
-        username: user.username,
-        email: user.email,
-        role: user.role,
-        zone: user.zone,
-        token: generateToken(user._id.toString()),
-      });
-    } else {
-      res.status(400).json({ message: 'Datos de usuario inválidos' });
-    }
-  } catch (error) {
-    res.status(500).json({ message: 'Error en el servidor al registrar el usuario' });
+    res.status(201).json({
+      _id: user._id,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      zone: user.zone,
+      token: generateToken(user._id.toString()),
+    });
+  } catch (error: any) {
+    console.error('Error en registerUser:', error);
+    res.status(500).json({
+      message: 'Error en el servidor al registrar el usuario',
+      error: error.message || error.toString(),
+    });
   }
 };
 
@@ -59,6 +61,7 @@ export const loginUser = async (req: Request, res: Response) => {
       res.status(401).json({ message: 'Correo electrónico o contraseña inválidos' });
     }
   } catch (error) {
+    console.error('Error en loginUser:', error);
     res.status(500).json({ message: 'Error en el servidor al iniciar sesión' });
   }
 };
@@ -81,7 +84,7 @@ export const updateUserProfile = async (req: AuthRequest, res: Response) => {
   if (!req.user) {
     return res.status(401).json({ message: 'No autorizado' });
   }
-  
+
   const user = await User.findById(req.user._id);
   if (user) {
     user.username = req.body.username || user.username;
@@ -118,17 +121,24 @@ export const deleteUserAccount = async (req: AuthRequest, res: Response) => {
 
 // CREAR UN NUEVO CONDUCTOR
 export const createDriver = async (req: Request, res: Response) => {
-    const { username, email, password, zone } = req.body;
-    try {
-        const userExists = await User.findOne({ email });
-        if (userExists) {
-            return res.status(400).json({ message: 'El correo electrónico ya está en uso' });
-        }
-        const driver = await User.create({
-            username, email, password, zone, role: 'driver' 
-        });
-        res.status(201).json(driver);
-    } catch (error) {
-        res.status(500).json({ message: 'Error en el servidor al crear el conductor' });
+  const { username, email, password, zone } = req.body;
+  try {
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return res.status(400).json({ message: 'El correo electrónico ya está en uso' });
     }
+    const driver = new User({
+      username,
+      email,
+      password,
+      zone,
+      role: 'driver',
+    });
+    await driver.save();
+
+    res.status(201).json(driver);
+  } catch (error: any) {
+    console.error('Error en createDriver:', error);
+    res.status(500).json({ message: 'Error en el servidor al crear el conductor', error: error.message || error.toString() });
+  }
 };

@@ -6,7 +6,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 interface SectionProps {
   title: string;
-  iconName: string;
+  iconName: keyof typeof MaterialCommunityIcons.glyphMap;
   backgroundColor: string;
 }
 
