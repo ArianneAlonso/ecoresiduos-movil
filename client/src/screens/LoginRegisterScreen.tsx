@@ -140,7 +140,6 @@ export default function LoginRegisterScreen() {
 
         {activeTab === 'inicio' ? (
           <View style={styles.formSection}>
-            <Text style={styles.inputLabel}>Correo Electrónico</Text>
             <TextInput
               mode="outlined"
               label="Correo Electrónico"
@@ -153,7 +152,6 @@ export default function LoginRegisterScreen() {
               theme={{ colors: { primary: '#9ccc65', onSurfaceVariant: '#666' } }}
             />
 
-            <Text style={styles.inputLabel}>Contraseña</Text>
             <TextInput
               mode="outlined"
               label="Contraseña"
@@ -184,7 +182,6 @@ export default function LoginRegisterScreen() {
           </View>
         ) : (
           <View style={styles.formSection}>
-            <Text style={styles.inputLabel}>Crear usuario</Text>
             <TextInput
               mode="outlined"
               label="Crear usuario"
@@ -197,7 +194,6 @@ export default function LoginRegisterScreen() {
               theme={{ colors: { primary: '#9ccc65', onSurfaceVariant: '#666' } }}
             />
 
-            <Text style={styles.inputLabel}>Correo Electrónico</Text>
             <TextInput
               mode="outlined"
               label="Correo Electrónico"
@@ -210,7 +206,6 @@ export default function LoginRegisterScreen() {
               theme={{ colors: { primary: '#9ccc65', onSurfaceVariant: '#666' } }}
             />
 
-            <Text style={styles.inputLabel}>Crear contraseña</Text>
             <TextInput
               mode="outlined"
               label="Crear contraseña"
