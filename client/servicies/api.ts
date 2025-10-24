@@ -23,7 +23,7 @@ interface RegisterCredentials {
 // CONFIGURACIÓN DE LA INSTANCIA DE AXIOS
 // -----------------------------------------------------------------
 
-const API_URL = 'http://10.254.196.102:3000/api';
+const API_URL = 'http://10.254.199.168:3000/api';
 
 const apiClient = axios.create({
   baseURL: API_URL,
