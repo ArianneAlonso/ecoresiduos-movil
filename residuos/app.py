@@ -14,7 +14,8 @@ app.add_middleware(
 app.include_router(images_router)
 @app.get("/")
 async def read_root():
-    return {"Hello": "World"}
+    return {"Hello": "World",
+            "hello": "World"}
 
 
 if __name__ == "__main__":
