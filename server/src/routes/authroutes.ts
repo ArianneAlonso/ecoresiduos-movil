@@ -17,9 +17,9 @@ router.post('/login', loginUser);
 router.route('/profile')
     .get(protect, getUserProfile)
     .put(protect, updateUserProfile)
-    .delete(protect, deleteUserAccount);
+    .delete(protect, deleteUserAccount); 
 
 // Ruta de Admin
 router.post('/drivers', protect, isAdmin, createDriver);
 
-export default router;
+export default router;  
