@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import connectDB from './config/database';
-import os from 'os'; // Importamos 'os' para encontrar la IP
+import os from 'os';
 
 //rutas
 import authRoutes from './routes/authroutes';
