@@ -5,6 +5,12 @@ import { TextInput, Button } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import api from '../../servicies/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+interface LoginResponse {
+  token: string;
+  role: string;
+}
 
 export default function LoginRegisterScreen() {
   const [activeTab, setActiveTab] = useState<'inicio' | 'registro'>('inicio');
@@ -66,15 +72,35 @@ export default function LoginRegisterScreen() {
     }
   };
 
-  // Función Login
   const handleLogin = async () => {
     if (loading) return;
     setLoading(true);
 
     try {
-      const response = await api.login({ email: username, password });
+      // Usamos la interfaz para darle tipado a la respuesta
+      const response: LoginResponse = await api.login({ email: username, password });
       console.log('Login exitoso:', response);
-      navigation.navigate('Main');
+
+      const token = response.token;
+      const userRole = response.role; // 'driver', 'usuario', etc.
+
+      // 1. Guardar los datos de sesión para el futuro
+      if (token) {
+        await AsyncStorage.setItem('userToken', token);
+      }
+      if (userRole) {
+        await AsyncStorage.setItem('userRole', userRole);
+      }
+
+      // 2. Navegar a la pantalla correcta según el rol
+      if (userRole === 'driver') {
+        // ¡OJO! Asegúrate de que tu pantalla se llame 'ConductorHome' en tu archivo de navegación.
+        navigation.navigate('ConductorHome');
+      } else {
+        // Navegación normal para otros usuarios
+        navigation.navigate('Main');
+      }
+
     } catch (error) {
       console.error('Error en login:', error);
       Alert.alert('Error', 'Usuario o contraseña incorrectos.');
@@ -83,7 +109,6 @@ export default function LoginRegisterScreen() {
     }
   };
 
-  // Función Registro
   const handleRegister = async () => {
     if (loading) return;
     setLoading(true);

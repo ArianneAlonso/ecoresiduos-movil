@@ -10,6 +10,7 @@ type RootStackParamList = {
   Main: undefined;
   ScanQR: undefined;
   ScanResiduo: undefined;
+  Map: undefined; // <-- AÑADIDA LA RUTA DEL MAPA
   // Agrega aquí otras rutas de tu Stack si es necesario
 };
 
@@ -64,13 +65,15 @@ export const CustomTabBarButton = () => {
     ],
   };
 
+  // --- Animaciones para los 3 botones ---
+
   const qrButtonStyle = {
     transform: [
       { scale: animation },
       {
         translateY: animation.interpolate({
           inputRange: [0, 1],
-          outputRange: [0, -65],
+          outputRange: [0, -65], // 1er botón
         }),
       },
     ],
@@ -82,19 +85,41 @@ export const CustomTabBarButton = () => {
       {
         translateY: animation.interpolate({
           inputRange: [0, 1],
-          outputRange: [0, -120],
+          outputRange: [0, -120], // 2o botón
+        }),
+      },
+    ],
+  } as const;
+  
+  // NUEVA ANIMACIÓN PARA EL MAPA
+  const mapButtonStyle = {
+    transform: [
+      { scale: animation },
+      {
+        translateY: animation.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0, -175], // 3er botón (más arriba)
         }),
       },
     ],
   } as const;
 
-  const handleNavigation = (screenName: 'ScanQR' | 'ScanResiduo') => {
+
+  const handleNavigation = (screenName: 'ScanQR' | 'ScanResiduo' | 'Map') => {
     toggleMenu(); // Cierra el menú al navegar
     navigation.navigate(screenName);
   }
 
   return (
     <View style={styles.container}>
+      
+      {/* NUEVO BOTÓN DE MAPA */}
+      <Animated.View style={[styles.secondaryButton, mapButtonStyle]}>
+        <TouchableOpacity onPress={() => handleNavigation('Map')}>
+          <MaterialCommunityIcons name="map-marker-outline" size={24} color="#FFF" />
+        </TouchableOpacity>
+      </Animated.View>
+
        <Animated.View style={[styles.secondaryButton, residuoButtonStyle]}>
         <TouchableOpacity onPress={() => handleNavigation('ScanResiduo')}>
           <ResiduoIcon color="#FFF" size={24} />
@@ -107,6 +132,7 @@ export const CustomTabBarButton = () => {
         </TouchableOpacity>
       </Animated.View>
 
+      {/* Botón principal */}
       <TouchableOpacity onPress={toggleMenu} style={styles.menuButton} activeOpacity={0.9}>
         <Animated.View style={rotation}>
             <MaterialCommunityIcons name="plus" size={32} color="#FFF" />
@@ -120,7 +146,7 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     justifyContent: 'center',
-    top: -30, // Sube el botón para que flote sobre la barra
+    top: -30,
   },
   menuButton: {
     backgroundColor: '#34c339',

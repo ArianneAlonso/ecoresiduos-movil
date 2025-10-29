@@ -147,11 +147,10 @@ export default function ScanResiduoScreen() {
           <TouchableOpacity
             style={styles.modalOverlay}
             activeOpacity={1}
-            onPress={closeResultModal} // Tocar fuera del modal lo cierra
+            onPress={closeResultModal}
           />
           <View style={styles.modalContent}>
             <Text style={styles.resultTitle}>Residuo Detectado</Text>
-            {/* Pequeña mejora: Cambiar color si es un error */}
             <Text style={[
                 styles.resultText, 
                 scanResult?.startsWith('Error') && styles.resultErrorText
