@@ -23,7 +23,7 @@ interface RegisterCredentials {
 // CONFIGURACIÓN DE LA INSTANCIA DE AXIOS
 // -----------------------------------------------------------------
 
-const API_URL = 'http://10.254.199.168:3000/api'; polo
+const API_URL = 'http://10.254.199.168:3000/api'; //polo
 //const API_URL = 'http://192.168.1.56:3000/api'; // casa
 
 const apiClient = axios.create({
