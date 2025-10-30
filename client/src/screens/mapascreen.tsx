@@ -2,15 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
-  SafeAreaView,
   TextInput,
   TouchableOpacity,
   ScrollView,
   Image,
-  Platform,
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Bell,
   Search,
@@ -21,20 +20,20 @@ import {
 } from 'lucide-react-native';
 import MapView, { Marker, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 import * as Location from 'expo-location';
+import Constants from 'expo-constants';
 
 // --- Colores de tu tema EcoResiduos ---
 const themeColors = {
-  primary: '#4CAF50', // Verde principal
-  secondary: '#388E3C', // Verde oscuro
-  lightBg: '#F0FDF4', // Fondo verde muy claro
-  text: '#1F2937', // Gris oscuro
-  placeholder: '#9CA3AF', // Gris para placeholders
+  primary: '#4CAF50',
+  secondary: '#388E3C',
+  lightBg: '#F0FDF4',
+  text: '#1F2937',
+  placeholder: '#9CA3AF',
   white: '#FFFFFF',
   cardBg: '#FFFFFF',
 };
 
 // --- Datos de ejemplo ---
-// En una app real, esto vendría de tu API
 const categories = [
   { name: 'Plástico', icon: Recycle, color: '#3B82F6' },
   { name: 'General', icon: Trash2, color: '#6B7280' },
@@ -48,16 +47,14 @@ const updates = [
     title: 'Nueva Ruta de Recolección',
     date: 'Oct 26, 2025',
     description: 'Se ha añadido una nueva ruta de recolección en la zona norte.',
-    image:
-      'https://placehold.co/100x70/4CAF50/FFFFFF?text=Ruta&font=inter',
+    image: 'https://placehold.co/100x70/4CAF50/FFFFFF?text=Ruta&font=inter',
   },
   {
     id: '2',
     title: 'Día del Reciclaje',
     date: 'Oct 25, 2025',
     description: 'Participa en el evento especial del Día del Reciclaje.',
-    image:
-      'https://placehold.co/100x70/3B82F6/FFFFFF?text=Evento&font=inter',
+    image: 'https://placehold.co/100x70/3B82F6/FFFFFF?text=Evento&font=inter',
   },
 ];
 
@@ -65,7 +62,7 @@ const updates = [
 const markers = [
   {
     id: '1',
-    latlng: { latitude: -26.183, longitude: -58.175 }, // Coordenadas de ejemplo (cerca de Formosa)
+    latlng: { latitude: -26.183, longitude: -58.175 },
     type: 'Plástico',
     iconColor: '#3B82F6',
   },
@@ -83,42 +80,19 @@ const markers = [
   },
 ];
 
-// Estilo de mapa (opcional, para un look más limpio)
+// Estilo de mapa opcional
 const mapStyle = [
   { elementType: 'geometry', stylers: [{ color: '#f5f5f5' }] },
   { elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
   { elementType: 'labels.text.fill', stylers: [{ color: '#616161' }] },
   { elementType: 'labels.text.stroke', stylers: [{ color: '#f5f5f5' }] },
-  {
-    featureType: 'administrative.land_parcel',
-    stylers: [{ visibility: 'off' }],
-  },
-  {
-    featureType: 'poi',
-    elementType: 'geometry',
-    stylers: [{ color: '#eeeeee' }],
-  },
-  {
-    featureType: 'poi',
-    elementType: 'labels.text.fill',
-    stylers: [{ color: '#757575' }],
-  },
+  { featureType: 'administrative.land_parcel', stylers: [{ visibility: 'off' }] },
+  { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#eeeeee' }] },
+  { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#757575' }] },
   { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#e5e5e5' }] },
-  {
-    featureType: 'road',
-    elementType: 'geometry',
-    stylers: [{ color: '#ffffff' }],
-  },
-  {
-    featureType: 'road',
-    elementType: 'labels.text.fill',
-    stylers: [{ color: '#9ca5b3' }],
-  },
-  {
-    featureType: 'water',
-    elementType: 'geometry',
-    stylers: [{ color: '#c9c9c9' }],
-  },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#ffffff' }] },
+  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#9ca5b3' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#c9c9c9' }] },
 ];
 
 export default function MapScreen() {
@@ -126,140 +100,91 @@ export default function MapScreen() {
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [region, setRegion] = useState<Region>({
-    latitude: -26.1834, // Latitud inicial (Formosa)
-    longitude: -58.1756, // Longitud inicial (Formosa)
+    latitude: -26.1834,
+    longitude: -58.1756,
     latitudeDelta: 0.0922,
     longitudeDelta: 0.0421,
   });
-  
+
   const mapRef = useRef<MapView>(null);
 
   useEffect(() => {
     (async () => {
-      let { status } = await Location.requestForegroundPermissionsAsync();
+      const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         setErrorMsg('Permiso para acceder a la ubicación fue denegado');
         return;
       }
 
-      let location = await Location.getCurrentPositionAsync({});
-      setLocation(location);
-      const newRegion = {
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      };
-      setRegion(newRegion);
-      mapRef.current?.animateToRegion(newRegion, 1000);
-
+      try {
+        const loc = await Location.getCurrentPositionAsync({});
+        setLocation(loc);
+        const newRegion = {
+          latitude: loc.coords.latitude,
+          longitude: loc.coords.longitude,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        };
+        setRegion(newRegion);
+        mapRef.current?.animateToRegion(newRegion, 1000);
+      } catch {
+        setErrorMsg('Error obteniendo ubicación');
+      }
     })();
   }, []);
 
+  // API URL automática
+  const API_URL = `http://${Constants.manifest?.debuggerHost?.split(':')[0]}:3000/api`;
+  console.log('🌐 Usando API URL:', API_URL);
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.white }}>
-      <ScrollView
-        className="flex-1"
-        contentContainerStyle={{ paddingBottom: 100 }}
-      >
-        {/* --- Cabecera: Saludo y Notificaciones --- */}
-        <View className="flex-row justify-between items-center p-6">
+      <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
+        {/* Cabecera */}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 }}>
           <View>
-            <Text className="text-xl" style={{ color: themeColors.placeholder }}>
-              Bienvenido de vuelta,
-            </Text>
-            <Text
-              className="text-3xl font-bold"
-              style={{ color: themeColors.text }}
-            >
-              Usuario
-            </Text>
+            <Text style={{ color: themeColors.placeholder, fontSize: 18 }}>Bienvenido de vuelta,</Text>
+            <Text style={{ color: themeColors.text, fontSize: 28, fontWeight: 'bold' }}>Usuario</Text>
           </View>
-          <TouchableOpacity
-            className="p-3 rounded-full"
-            style={{ backgroundColor: themeColors.lightBg }}
-          >
+          <TouchableOpacity style={{ padding: 12, borderRadius: 50, backgroundColor: themeColors.lightBg }}>
             <Bell size={24} color={themeColors.primary} />
           </TouchableOpacity>
         </View>
 
-        {/* --- Barra de Búsqueda --- */}
-        <View className="px-6 mb-6">
-          <View
-            className="flex-row items-center p-4 rounded-xl"
-            style={{ backgroundColor: themeColors.lightBg }}
-          >
-            <Search color={themeColors.placeholder} size={20} />
+        {/* Barra de búsqueda */}
+        <View style={{ paddingHorizontal: 16, marginBottom: 16 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 16, backgroundColor: themeColors.lightBg }}>
+            <Search size={20} color={themeColors.placeholder} />
             <TextInput
-              className="flex-1 ml-3 text-base"
+              style={{ flex: 1, marginLeft: 12, fontSize: 16, color: themeColors.text }}
               placeholder="Buscar contenedores, puntos..."
               placeholderTextColor={themeColors.placeholder}
             />
           </View>
         </View>
 
-        {/* --- Categorías de Contenedores --- */}
-        <View className="mb-6">
-          <Text
-            className="text-lg font-semibold px-6 mb-3"
-            style={{ color: themeColors.text }}
-          >
-            Categorías
-          </Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 24 }}
-          >
+        {/* Categorías */}
+        <View style={{ marginBottom: 16 }}>
+          <Text style={{ color: themeColors.text, fontSize: 18, fontWeight: '600', paddingHorizontal: 16, marginBottom: 8 }}>Categorías</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16 }}>
             {categories.map((item, index) => {
               const isSelected = selectedCategory === item.name;
               return (
-                <TouchableOpacity
-                  key={index}
-                  className="items-center mr-4"
-                  onPress={() => setSelectedCategory(item.name)}
-                >
-                  <View
-                    className="p-4 rounded-full"
-                    style={{
-                      backgroundColor: isSelected
-                        ? themeColors.primary
-                        : themeColors.lightBg,
-                    }}
-                  >
-                    <item.icon
-                      size={24}
-                      color={isSelected ? themeColors.white : item.color}
-                    />
+                <TouchableOpacity key={index} style={{ alignItems: 'center', marginRight: 12 }} onPress={() => setSelectedCategory(item.name)}>
+                  <View style={{ padding: 16, borderRadius: 50, backgroundColor: isSelected ? themeColors.primary : themeColors.lightBg }}>
+                    <item.icon size={24} color={isSelected ? themeColors.white : item.color} />
                   </View>
-                  <Text
-                    className="mt-2 text-sm font-medium"
-                    style={{
-                      color: isSelected
-                        ? themeColors.primary
-                        : themeColors.placeholder,
-                    }}
-                  >
-                    {item.name}
-                  </Text>
+                  <Text style={{ marginTop: 4, fontSize: 12, color: isSelected ? themeColors.primary : themeColors.placeholder }}>{item.name}</Text>
                 </TouchableOpacity>
               );
             })}
           </ScrollView>
         </View>
 
-        {/* --- Mapa Interactivo --- */}
-        <View className="px-6 mb-6">
-          <Text
-            className="text-lg font-semibold mb-3"
-            style={{ color: themeColors.text }}
-          >
-            Mapa de Contenedores
-          </Text>
-          <View
-            className="rounded-2xl overflow-hidden"
-            style={styles.mapContainer}
-          >
+        {/* Mapa */}
+        <View style={{ paddingHorizontal: 16, marginBottom: 16 }}>
+          <Text style={{ color: themeColors.text, fontSize: 18, fontWeight: '600', marginBottom: 8 }}>Mapa de Contenedores</Text>
+          <View style={styles.mapContainer}>
             {errorMsg ? (
               <Text>{errorMsg}</Text>
             ) : location ? (
@@ -269,78 +194,35 @@ export default function MapScreen() {
                 provider={PROVIDER_GOOGLE}
                 initialRegion={region}
                 customMapStyle={mapStyle}
-                showsUserLocation={true}
+                showsUserLocation
                 showsMyLocationButton={false}
               >
-                {markers.map((marker) => (
-                  <Marker
-                    key={marker.id}
-                    coordinate={marker.latlng}
-                    title={marker.type}
-                  >
-                    <View
-                      className="p-2 rounded-full shadow-lg"
-                      style={{ backgroundColor: marker.iconColor }}
-                    >
-                      <MapPin size={24} color={themeColors.white} />
-                    </View>
-                  </Marker>
-                ))}
+                {markers
+                  .filter(m => selectedCategory === 'Todos' || m.type === selectedCategory)
+                  .map(marker => (
+                    <Marker key={marker.id} coordinate={marker.latlng} title={marker.type}>
+                      <View style={{ padding: 8, borderRadius: 50, backgroundColor: marker.iconColor }}>
+                        <MapPin size={24} color={themeColors.white} />
+                      </View>
+                    </Marker>
+                  ))}
               </MapView>
             ) : (
-              <ActivityIndicator
-                size="large"
-                color={themeColors.primary}
-                style={{ flex: 1 }}
-              />
+              <ActivityIndicator size="large" color={themeColors.primary} style={{ flex: 1 }} />
             )}
           </View>
         </View>
 
-        {/* --- Actualizaciones y Noticias --- */}
+        {/* Actualizaciones */}
         <View>
-          <Text
-            className="text-lg font-semibold px-6 mb-3"
-            style={{ color: themeColors.text }}
-          >
-            Actualizaciones
-          </Text>
-          {updates.map((item) => (
-            <TouchableOpacity
-              key={item.id}
-              className="flex-row items-center bg-white p-4 mx-6 mb-3 rounded-xl shadow"
-              style={{
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.05,
-                shadowRadius: 4,
-                elevation: 3,
-              }}
-            >
-              <Image
-                source={{ uri: item.image }}
-                className="w-20 h-16 rounded-lg"
-                onError={(e) => console.log('Error cargando imagen:', e.nativeEvent.error)}
-              />
-              <View className="flex-1 ml-4">
-                <Text
-                  className="text-base font-semibold"
-                  style={{ color: themeColors.text }}
-                >
-                  {item.title}
-                </Text>
-                <Text
-                  className="text-sm"
-                  style={{ color: themeColors.placeholder }}
-                >
-                  {item.description}
-                </Text>
-                <Text
-                  className="text-xs mt-1"
-                  style={{ color: themeColors.primary }}
-                >
-                  {item.date}
-                </Text>
+          <Text style={{ color: themeColors.text, fontSize: 18, fontWeight: '600', paddingHorizontal: 16, marginBottom: 8 }}>Actualizaciones</Text>
+          {updates.map(item => (
+            <TouchableOpacity key={item.id} style={{ flexDirection: 'row', backgroundColor: themeColors.cardBg, padding: 12, marginHorizontal: 16, marginBottom: 12, borderRadius: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 3 }}>
+              <Image source={{ uri: item.image }} style={{ width: 80, height: 56, borderRadius: 8 }} onError={(e) => console.log('Error cargando imagen:', e.nativeEvent.error)} />
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <Text style={{ color: themeColors.text, fontSize: 16, fontWeight: '600' }}>{item.title}</Text>
+                <Text style={{ color: themeColors.placeholder, fontSize: 14 }}>{item.description}</Text>
+                <Text style={{ color: themeColors.primary, fontSize: 12, marginTop: 4 }}>{item.date}</Text>
               </View>
             </TouchableOpacity>
           ))}
@@ -354,10 +236,11 @@ const styles = StyleSheet.create({
   mapContainer: {
     height: 300,
     width: '100%',
-    backgroundColor: '#E5E7EB', // Color de fondo mientras carga el mapa
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: '#E5E7EB',
   },
   map: {
     ...StyleSheet.absoluteFillObject,
   },
 });
-

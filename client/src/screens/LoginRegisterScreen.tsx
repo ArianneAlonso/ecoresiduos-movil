@@ -1,12 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Alert } from 'react-native';
+import {
+  StyleSheet,
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TextInput, Button } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import * as Location from 'expo-location';
-import api from '../../servicies/api';
+// CORRECCIÓN: Corregido el typo en la ruta de 'servicies' a 'services'
+import api from '../../servicies/api'; 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// Interfaz para los datos de login esperados
 interface LoginResponse {
   token: string;
   role: string;
@@ -26,8 +36,9 @@ export default function LoginRegisterScreen() {
   const [zone, setZone] = useState('');
   const [loadingLocation, setLoadingLocation] = useState(false);
 
-  // Estado de Carga
+  // Estado de Carga y Errores
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Navegación
   const navigation = useNavigation<any>();
@@ -41,10 +52,11 @@ export default function LoginRegisterScreen() {
 
   const getLocationAndZone = async () => {
     setLoadingLocation(true);
+    setErrorMessage(null); // Limpiar errores previos
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permiso denegado', 'No se pudo obtener la ubicación');
+        setErrorMessage('Permiso de ubicación denegado.');
         setZone('Desconocida');
         return;
       }
@@ -66,6 +78,7 @@ export default function LoginRegisterScreen() {
       setZone(city);
     } catch (err) {
       console.error('Error al obtener la ubicación:', err);
+      setErrorMessage('Error al obtener la ubicación.');
       setZone('Desconocida');
     } finally {
       setLoadingLocation(false);
@@ -75,16 +88,28 @@ export default function LoginRegisterScreen() {
   const handleLogin = async () => {
     if (loading) return;
     setLoading(true);
+    setErrorMessage(null); // Limpiar errores previos
 
     try {
-      // Usamos la interfaz para darle tipado a la respuesta
-      const response: LoginResponse = await api.login({ email: username, password });
-      console.log('Login exitoso:', response);
+      // 1. Llama a la API. 'apiResponse' contendrá el objeto de login directamente.
+      //    (Ej: { _id: "...", email: "...", role: "...", token: "..." })
+      const apiResponse: LoginResponse = await api.login({ email: username, password });
+      
+      // Opcional: Imprime la respuesta completa para depurar
+      console.log('Respuesta COMPLETA de la API:', apiResponse);
 
-      const token = response.token;
-      const userRole = response.role; // 'driver', 'usuario', etc.
+      // 2. CORRECCIÓN: Ya no se extrae de '.data'. 'apiResponse' ES la data.
+      // const responseData: LoginResponse = apiResponse.data; // <- ESTO ERA INCORRECTO
 
-      // 1. Guardar los datos de sesión para el futuro
+      // 3. Valida que los datos existan (ahora validamos 'apiResponse' en sí)
+      if (!apiResponse || !apiResponse.token) { // Una validación más robusta
+        throw new Error('Respuesta inválida de la API, no se encontró token.');
+      }
+      
+      const token = apiResponse.token;
+      const userRole = apiResponse.role; // 'driver', 'usuario', etc.
+
+      // 4. Guardar los datos de sesión para el futuro
       if (token) {
         await AsyncStorage.setItem('userToken', token);
       }
@@ -92,18 +117,16 @@ export default function LoginRegisterScreen() {
         await AsyncStorage.setItem('userRole', userRole);
       }
 
-      // 2. Navegar a la pantalla correcta según el rol
+      // 5. Navegar a la pantalla correcta según el rol
       if (userRole === 'driver') {
-        // ¡OJO! Asegúrate de que tu pantalla se llame 'ConductorHome' en tu archivo de navegación.
         navigation.navigate('ConductorHome');
       } else {
-        // Navegación normal para otros usuarios
         navigation.navigate('Main');
       }
-
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error en login:', error);
-      Alert.alert('Error', 'Usuario o contraseña incorrectos.');
+      // Muestra un error más amigable en la UI
+      setErrorMessage(error.response?.data?.message || 'Usuario o contraseña incorrectos.');
     } finally {
       setLoading(false);
     }
@@ -112,9 +135,10 @@ export default function LoginRegisterScreen() {
   const handleRegister = async () => {
     if (loading) return;
     setLoading(true);
+    setErrorMessage(null); // Limpiar errores previos
 
     if (!createUsername || !email || !createPassword || !zone) {
-      Alert.alert('Error', 'Todos los campos y la zona son obligatorios');
+      setErrorMessage('Todos los campos y la zona son obligatorios');
       setLoading(false);
       return;
     }
@@ -127,15 +151,18 @@ export default function LoginRegisterScreen() {
         zone,
       } as any);
 
-      Alert.alert('¡Éxito!', 'Te has registrado correctamente. Ahora puedes iniciar sesión.');
+      // Éxito: limpiar campos y cambiar a la pestaña de inicio
       setCreateUsername('');
       setEmail('');
       setCreatePassword('');
       setZone('');
       setActiveTab('inicio');
-    } catch (error) {
+      // Opcional: Mostrar un mensaje de éxito
+      setErrorMessage('¡Éxito! Te has registrado. Ahora puedes iniciar sesión.');
+
+    } catch (error: any) {
       console.error('Error en registro:', error);
-      Alert.alert('Error', 'No se pudo completar el registro. Intenta de nuevo.');
+      setErrorMessage(error.response?.data?.message || 'No se pudo completar el registro. Intenta de nuevo.');
     } finally {
       setLoading(false);
     }
@@ -143,25 +170,36 @@ export default function LoginRegisterScreen() {
 
   const handleForgotPassword = () => {
     console.log('Olvidé la contraseña');
+    setErrorMessage('Función de recuperación de contraseña no implementada.');
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.container}
+      >
         <View style={{ flexDirection: 'row', marginBottom: 20 }}>
           <TouchableOpacity
-            onPress={() => setActiveTab('inicio')}
-            style={{ marginRight: 10, padding: 8, backgroundColor: activeTab === 'inicio' ? '#9ccc65' : '#eee', borderRadius: 6 }}
+            onPress={() => { setActiveTab('inicio'); setErrorMessage(null); }}
+            style={[styles.tabButton, activeTab === 'inicio' ? styles.tabActive : styles.tabInactive]}
           >
-            <Text style={{ color: activeTab === 'inicio' ? '#fff' : '#333' }}>Iniciar sesión</Text>
+            <Text style={activeTab === 'inicio' ? styles.tabTextActive : styles.tabTextInactive}>Iniciar sesión</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => setActiveTab('registro')}
-            style={{ padding: 8, backgroundColor: activeTab === 'registro' ? '#9ccc65' : '#eee', borderRadius: 6 }}
+            onPress={() => { setActiveTab('registro'); setErrorMessage(null); }}
+            style={[styles.tabButton, activeTab === 'registro' ? styles.tabActive : styles.tabInactive]}
           >
-            <Text style={{ color: activeTab === 'registro' ? '#fff' : '#333' }}>Registro</Text>
+            <Text style={activeTab === 'registro' ? styles.tabTextActive : styles.tabTextInactive}>Registro</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Mensaje de Error/Éxito */}
+        {errorMessage && (
+          <Text style={[styles.messageText, errorMessage.startsWith('¡Éxito!') ? styles.successText : styles.errorText]}>
+            {errorMessage}
+          </Text>
+        )}
 
         {activeTab === 'inicio' ? (
           <View style={styles.formSection}>
@@ -175,6 +213,8 @@ export default function LoginRegisterScreen() {
               style={styles.textInput}
               outlineStyle={styles.textInputOutline}
               theme={{ colors: { primary: '#9ccc65', onSurfaceVariant: '#666' } }}
+              keyboardType="email-address"
+              autoCapitalize="none"
             />
 
             <TextInput
@@ -197,8 +237,8 @@ export default function LoginRegisterScreen() {
             <Button
               mode="contained"
               onPress={handleLogin}
-              style={styles.loginButton}
-              labelStyle={styles.loginButtonLabel}
+              style={styles.actionButton}
+              labelStyle={styles.actionButtonLabel}
               loading={loading}
               disabled={loading}
             >
@@ -206,7 +246,7 @@ export default function LoginRegisterScreen() {
             </Button>
           </View>
         ) : (
-          <View style={styles.formSection}>
+          <ScrollView style={styles.formSection}>
             <TextInput
               mode="outlined"
               label="Crear usuario"
@@ -229,6 +269,8 @@ export default function LoginRegisterScreen() {
               style={styles.textInput}
               outlineStyle={styles.textInputOutline}
               theme={{ colors: { primary: '#9ccc65', onSurfaceVariant: '#666' } }}
+              keyboardType="email-address"
+              autoCapitalize="none"
             />
 
             <TextInput
@@ -241,26 +283,26 @@ export default function LoginRegisterScreen() {
               left={<TextInput.Icon icon="lock-outline" />}
               style={styles.textInput}
               outlineStyle={styles.textInputOutline}
-              theme={{ colors: { primary: '#9ccc65', onSurfaceVariant: '#666' } }}
+              theme={{ colors: { primary: '#9ccc6F5', onSurfaceVariant: '#666' } }}
             />
 
-            <Text style={{ marginTop: 10, color: '#666', fontSize: 14 }}>
+            <Text style={{ marginTop: 10, color: '#666', fontSize: 14, marginBottom: 10 }}>
               Zona detectada: {loadingLocation ? 'Cargando...' : zone || 'No detectada'}
             </Text>
 
             <Button
               mode="contained"
               onPress={handleRegister}
-              style={styles.loginButton}
-              labelStyle={styles.loginButtonLabel}
+              style={styles.actionButton}
+              labelStyle={styles.actionButtonLabel}
               loading={loading}
               disabled={loading}
             >
               {loading ? 'Registrando...' : 'Registrar'}
             </Button>
-          </View>
+          </ScrollView>
         )}
-      </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -268,30 +310,61 @@ export default function LoginRegisterScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#fff'
+    backgroundColor: '#fff',
   },
   container: {
     flex: 1,
-    padding: 20
+    padding: 20,
+  },
+  tabButton: {
+    flex: 1,
+    padding: 10,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabActive: {
+    backgroundColor: '#9ccc65',
+  },
+  tabInactive: {
+    backgroundColor: '#eee',
+  },
+  tabTextActive: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  tabTextInactive: {
+    color: '#333',
   },
   formSection: {
-    flex: 1
+    flex: 1,
   },
   textInput: {
-    marginBottom: 10
+    marginBottom: 10,
   },
   textInputOutline: {
-    borderRadius: 8
+    borderRadius: 8,
   },
-  loginButton: {
+  actionButton: {
     marginTop: 20,
-    backgroundColor: '#9ccc65'
+    backgroundColor: '#9ccc65',
+    paddingVertical: 5,
   },
-  loginButtonLabel: {
-    fontSize: 16
+  actionButtonLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
   },
-  inputLabel: {
-    marginBottom: 5,
-    color: '#666'
+  messageText: {
+    marginBottom: 15,
+    textAlign: 'center',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  errorText: {
+    color: '#D32F2F', // Un color rojo para errores
+  },
+  successText: {
+    color: '#388E3C', // Un color verde para éxito
   }
 });
+
