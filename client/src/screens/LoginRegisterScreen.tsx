@@ -12,11 +12,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { TextInput, Button } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import * as Location from 'expo-location';
-// CORRECCIÓN: Corregido el typo en la ruta de 'servicies' a 'services'
 import api from '../../servicies/api'; 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Interfaz para los datos de login esperados
 interface LoginResponse {
   token: string;
   role: string;
@@ -52,7 +50,7 @@ export default function LoginRegisterScreen() {
 
   const getLocationAndZone = async () => {
     setLoadingLocation(true);
-    setErrorMessage(null); // Limpiar errores previos
+    setErrorMessage(null);
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
@@ -88,28 +86,20 @@ export default function LoginRegisterScreen() {
   const handleLogin = async () => {
     if (loading) return;
     setLoading(true);
-    setErrorMessage(null); // Limpiar errores previos
+    setErrorMessage(null);
 
     try {
-      // 1. Llama a la API. 'apiResponse' contendrá el objeto de login directamente.
-      //    (Ej: { _id: "...", email: "...", role: "...", token: "..." })
-      const apiResponse: LoginResponse = await api.login({ email: username, password });
+      const apiResponse = (await api.login({ email: username, password })) as unknown as LoginResponse;
       
-      // Opcional: Imprime la respuesta completa para depurar
       console.log('Respuesta COMPLETA de la API:', apiResponse);
 
-      // 2. CORRECCIÓN: Ya no se extrae de '.data'. 'apiResponse' ES la data.
-      // const responseData: LoginResponse = apiResponse.data; // <- ESTO ERA INCORRECTO
-
-      // 3. Valida que los datos existan (ahora validamos 'apiResponse' en sí)
-      if (!apiResponse || !apiResponse.token) { // Una validación más robusta
+      if (!apiResponse || !apiResponse.token) {
         throw new Error('Respuesta inválida de la API, no se encontró token.');
       }
       
       const token = apiResponse.token;
-      const userRole = apiResponse.role; // 'driver', 'usuario', etc.
+      const userRole = apiResponse.role;
 
-      // 4. Guardar los datos de sesión para el futuro
       if (token) {
         await AsyncStorage.setItem('userToken', token);
       }
@@ -117,7 +107,6 @@ export default function LoginRegisterScreen() {
         await AsyncStorage.setItem('userRole', userRole);
       }
 
-      // 5. Navegar a la pantalla correcta según el rol
       if (userRole === 'driver') {
         navigation.navigate('ConductorHome');
       } else {
@@ -125,7 +114,6 @@ export default function LoginRegisterScreen() {
       }
     } catch (error: any) {
       console.error('Error en login:', error);
-      // Muestra un error más amigable en la UI
       setErrorMessage(error.response?.data?.message || 'Usuario o contraseña incorrectos.');
     } finally {
       setLoading(false);
@@ -135,7 +123,7 @@ export default function LoginRegisterScreen() {
   const handleRegister = async () => {
     if (loading) return;
     setLoading(true);
-    setErrorMessage(null); // Limpiar errores previos
+    setErrorMessage(null);
 
     if (!createUsername || !email || !createPassword || !zone) {
       setErrorMessage('Todos los campos y la zona son obligatorios');
@@ -151,13 +139,11 @@ export default function LoginRegisterScreen() {
         zone,
       } as any);
 
-      // Éxito: limpiar campos y cambiar a la pestaña de inicio
       setCreateUsername('');
       setEmail('');
       setCreatePassword('');
       setZone('');
       setActiveTab('inicio');
-      // Opcional: Mostrar un mensaje de éxito
       setErrorMessage('¡Éxito! Te has registrado. Ahora puedes iniciar sesión.');
 
     } catch (error: any) {
@@ -194,7 +180,6 @@ export default function LoginRegisterScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Mensaje de Error/Éxito */}
         {errorMessage && (
           <Text style={[styles.messageText, errorMessage.startsWith('¡Éxito!') ? styles.successText : styles.errorText]}>
             {errorMessage}
@@ -361,10 +346,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   errorText: {
-    color: '#D32F2F', // Un color rojo para errores
+    color: '#68d32fff',
   },
   successText: {
-    color: '#388E3C', // Un color verde para éxito
+    color: '#3f8e38ff',
   }
 });
 
