@@ -1,6 +1,7 @@
+import dotenv from 'dotenv';
+dotenv.config();
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import connectDB from './config/database';
 import os from 'os';
 import authRoutes from './routes/authroutes';
@@ -9,7 +10,6 @@ import truckRouteRoutes from './routes/truckrouteroutes';
 import qrCodeRoutes from './routes/qrroutes';
 import imageRoutes from './routes/geminiroutes';
 
-// --- Función para obtener la IP local ---
 function getLocalIp() {
   const networkInterfaces = os.networkInterfaces();
   for (const name of Object.keys(networkInterfaces)) {
@@ -25,9 +25,7 @@ function getLocalIp() {
   return 'IP_NO_ENCONTRADA';
 }
 
-// Configuración inicial
-dotenv.config();
-connectDB();
+connectDB(); 
 const app = express();
 const PORT = parseInt(process.env.PORT || '3000', 10);
 const HOST = '0.0.0.0';
@@ -42,6 +40,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/containers', containerRoutes);
 app.use('/api/routes', truckRouteRoutes);
 app.use('/api/qrcodes', qrCodeRoutes);
+
+// Ruta del clasificador
 app.use('/api', imageRoutes);
 
 // Iniciar el servidor Node
@@ -49,3 +49,4 @@ app.listen(PORT, HOST, () => {
   console.log(`Servidor Node corriendo en http://${HOST}:${PORT}`);
   console.log(`Accesible desde la red local en: http://${LOCAL_IP}:${PORT}`);
 });
+
