@@ -1,6 +1,7 @@
 import axios, { AxiosResponse } from 'axios';
+import Constants from 'expo-constants';
 
-// Interfaces de ejemplo (ajustalas según tu proyecto)
+// Interfaces
 interface ApiResponse<T> {
   data: T;
   message?: string;
@@ -20,12 +21,30 @@ interface RegisterCredentials {
 }
 
 // -----------------------------------------------------------------
-// CONFIGURACIÓN DE LA INSTANCIA DE AXIOS
+// 📡 OBTENER IP AUTOMÁTICA
 // -----------------------------------------------------------------
+const getLocalApiUrl = () => {
+  // Si estás en desarrollo con Expo, obtenemos la IP del host automáticamente
+  const manifest = Constants.manifest;
+  const expoConfig = Constants.expoConfig;
 
-const API_URL = 'http://10.254.199.168:3000/api'; //polo
-//const API_URL = 'http://192.168.1.56:3000/api'; // casa
+  // Expo SDK 48+ usa `expoConfig.hostUri`, versiones anteriores usan `manifest.debuggerHost`
+  const debuggerHost =
+    expoConfig?.hostUri || manifest?.debuggerHost || 'localhost:3000';
 
+  const localIP = debuggerHost.split(':')[0]; // Tomamos solo la IP
+  const baseURL = `http://${localIP}:3000/api`;
+
+  return baseURL;
+};
+
+const API_URL = getLocalApiUrl();
+
+console.log('🌐 Usando API URL:', API_URL);
+
+// -----------------------------------------------------------------
+// ⚙️ CONFIGURACIÓN DE AXIOS
+// -----------------------------------------------------------------
 const apiClient = axios.create({
   baseURL: API_URL,
   timeout: 10000,
@@ -35,9 +54,8 @@ const apiClient = axios.create({
 });
 
 // -----------------------------------------------------------------
-// OBJETO API CENTRALIZADO
+// 🧩 API CENTRALIZADA
 // -----------------------------------------------------------------
-
 const api = {
   login: async (credentials: LoginCredentials): Promise<ApiResponse<any>> => {
     try {
